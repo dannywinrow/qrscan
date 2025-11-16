@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>jsQR Code Reader</title>
+    <title>Advanced jsQR Reader for High-Density Codes</title>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
         body {
@@ -11,40 +11,47 @@
             text-align: center;
             padding: 20px;
         }
-        #video, #canvas {
-            display: none; /* Keep video and canvas hidden, only the result needs to be visible */
+        #video {
+            display: block;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            border: 2px solid #2ecc71;
+            border-radius: 8px;
+        }
+        #canvas {
+            display: none; /* Keep canvas hidden */
         }
         #output {
             margin-top: 20px;
             font-size: 1.2em;
             min-height: 50px;
-            border: 1px solid #ccc;
             padding: 10px;
+            border: 1px solid #ccc;
             border-radius: 4px;
         }
-        #loadingMessage {
-            color: #888;
-            font-size: 1.1em;
-        }
-        /* Style for the visible camera feed (optional, for visual feedback) */
-        #cameraFeed {
-            width: 100%;
-            max-width: 500px;
-            margin: 0 auto;
-            border: 2px solid #3498db;
-            border-radius: 8px;
-            overflow: hidden;
+        #controls {
+            margin: 15px 0;
         }
     </style>
 </head>
 <body>
 
-    <h1>jsQR Scanner</h1>
+    <h1>High-Density QR Scanner</h1>
+    <p>Using higher camera resolution should improve scanning of small, dense codes.</p>
 
-    <div id="cameraFeed">
-        <video id="video" playsinline></video>
-        <canvas id="canvas"></canvas>
+    <div id="controls">
+        <label for="resolutionSelect">Select Resolution:</label>
+        <select id="resolutionSelect">
+            <option value="640">Low (640x480)</option>
+            <option value="1280" selected>Medium (1280x720)</option>
+            <option value="1920">High (1920x1080)</option>
+        </select>
+        <button onclick="changeResolution()">Apply</button>
     </div>
+
+    <video id="video" playsinline></video>
+    <canvas id="canvas"></canvas>
 
     <div id="output">
         <div id="loadingMessage">Loading camera...</div>
@@ -52,41 +59,60 @@
     </div>
 
     <script>
-        // --- JavaScript Code using jsQR ---
+        // --- JavaScript Code for jsQR with Resolution Control ---
         const video = document.getElementById("video");
         const canvasElement = document.getElementById("canvas");
         const canvas = canvasElement.getContext("2d");
         const loadingMessage = document.getElementById("loadingMessage");
-        const outputDiv = document.getElementById("output");
         const outputResult = document.getElementById("result");
+        const resolutionSelect = document.getElementById("resolutionSelect");
         
-        let stream;
+        let stream = null;
+        let activeConstraints = { width: 1280, height: 720 };
 
-        // 1. Get Camera Stream
-        async function startCamera() {
+        // 1. Get Camera Stream with constraints
+        async function startCamera(constraints) {
+            // Stop existing stream if it exists
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
             try {
-                // Request access to the video camera
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                // Request access to the video camera with specific constraints
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: "environment",
+                        width: { ideal: constraints.width },
+                        height: { ideal: constraints.height }
+                    } 
+                });
+                
                 video.srcObject = stream;
-                // Wait for the video to load before playing
                 await video.play(); 
                 
-                // Show video once loaded and started
-                video.style.display = 'block';
-                loadingMessage.innerText = "Point your camera at a QR code.";
+                loadingMessage.innerText = "Scanning for high-density code...";
                 
-                // Start the scanning loop
+                // Clear any previous loop and start a new one
                 requestAnimationFrame(tick);
+
             } catch (err) {
                 console.error("Error accessing camera: ", err);
-                loadingMessage.innerText = "Error: Could not access the camera. Check permissions.";
+                loadingMessage.innerText = `Error: Could not access the camera at ${constraints.width}x${constraints.height}. Try a lower resolution.`;
             }
         }
         
+        // Function to handle resolution change from the dropdown
+        function changeResolution() {
+            const res = parseInt(resolutionSelect.value);
+            activeConstraints = { width: res, height: res * (9/16) }; // Maintain 16:9 aspect ratio
+            loadingMessage.innerText = "Switching resolution, please wait...";
+            startCamera(activeConstraints);
+        }
+
         // 2. The main scanning loop
         function tick() {
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                // Set canvas size to video size
+                // Set canvas size to the actual video stream size
                 canvasElement.height = video.videoHeight;
                 canvasElement.width = video.videoWidth;
                 
@@ -98,7 +124,8 @@
                 
                 // Decode the QR code using jsQR
                 const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                    inversionAttempts: "dontInvert", // Important for small/low-contrast codes
+                    // Try to avoid inversion attempts for small, standard codes
+                    inversionAttempts: "dontInvert", 
                 });
 
                 if (code) {
@@ -122,8 +149,8 @@
             }
         }
 
-        // Start the process
-        startCamera();
+        // Start the process with the default resolution
+        startCamera(activeConstraints);
     </script>
 
 </body>
