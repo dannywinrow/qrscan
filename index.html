@@ -3,24 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTML5 Barcode Scanner</title>
+    <title>High-Resolution html5-qrcode Reader</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        #qr-reader {
-            width: 100%;
-            max-width: 600px;
-            margin: auto;
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            padding: 20px;
         }
-        @media (max-width: 600px) {
-            #qr-reader {
-                width: 100%;
-            }
+        #reader {
+            width: 100%;
+            max-width: 500px;
+            margin: 20px auto;
+            border: 1px solid #3498db; /* Highlight the scanner area */
+            border-radius: 8px;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
         }
     </style>
 </head>
 <body>
-    <div id="qr-reader"></div>
-    <div id="qr-reader-results"></div>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="script.js"></script>
+
+    <h1>High-Density html5-qrcode Scanner</h1>
+    <p>Configured for high resolution and a small scanning area.</p>
+
+    <div id="reader"></div>
+
+    <p id="result">Scanning...</p>
+
+    <script>
+        // --- JavaScript Code for QR Scanning ---
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // Handle the successful scan result
+            document.getElementById('result').textContent = `Scanned QR Code: ${decodedText}`;
+            
+            // Optionally stop scanning after the first successful scan
+            html5QrcodeScanner.clear(); 
+        }
+
+        function onScanFailure(error) {
+            // Log scan failures only if needed for debugging
+            // console.warn(`Code scan error = ${error}`);
+        }
+
+        // Configuration for the scanner
+        const config = {
+            fps: 10,  // Frames per second for the video stream
+            
+            // Set a small scanning box to focus the camera's attention
+            // This is relative to the size of the #reader container
+            qrbox: { width: 150, height: 150 }, 
+            
+            // Explicitly request high resolution video stream
+            // This is the key change for dense codes
+            videoConstraints: {
+                facingMode: "environment",
+                width: { ideal: 1280 },  // Request 720p or higher width
+                height: { ideal: 720 }   // Request 720p or higher height
+            }
+        };
+
+        // Create an instance of the scanner
+        const html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", // The ID of the HTML element where the scanner will render
+            config,   // Pass the custom configuration object
+            /* verbose= */ false 
+        );
+
+        // Start the scanner and provide the callback functions
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    </script>
+
 </body>
 </html>
