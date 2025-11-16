@@ -14,9 +14,9 @@ docReady(function() {
 
         // define the config object
     let config = {
-        fps: 3,
-        qrbox: {width: 100, height: 100},
-        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        fps: 10,
+        qrbox: {width: 50, height: 50},
+        //formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
         showTorchButtonIfSupported: true,
     };
     
