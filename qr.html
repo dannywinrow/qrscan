@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>jsQR Code Reader</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        #video, #canvas {
+            display: none; /* Keep video and canvas hidden, only the result needs to be visible */
+        }
+        #output {
+            margin-top: 20px;
+            font-size: 1.2em;
+            min-height: 50px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        #loadingMessage {
+            color: #888;
+            font-size: 1.1em;
+        }
+        /* Style for the visible camera feed (optional, for visual feedback) */
+        #cameraFeed {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>jsQR Scanner</h1>
+
+    <div id="cameraFeed">
+        <video id="video" playsinline></video>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <div id="output">
+        <div id="loadingMessage">Loading camera...</div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // --- JavaScript Code using jsQR ---
+        const video = document.getElementById("video");
+        const canvasElement = document.getElementById("canvas");
+        const canvas = canvasElement.getContext("2d");
+        const loadingMessage = document.getElementById("loadingMessage");
+        const outputDiv = document.getElementById("output");
+        const outputResult = document.getElementById("result");
+        
+        let stream;
+
+        // 1. Get Camera Stream
+        async function startCamera() {
+            try {
+                // Request access to the video camera
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                video.srcObject = stream;
+                // Wait for the video to load before playing
+                await video.play(); 
+                
+                // Show video once loaded and started
+                video.style.display = 'block';
+                loadingMessage.innerText = "Point your camera at a QR code.";
+                
+                // Start the scanning loop
+                requestAnimationFrame(tick);
+            } catch (err) {
+                console.error("Error accessing camera: ", err);
+                loadingMessage.innerText = "Error: Could not access the camera. Check permissions.";
+            }
+        }
+        
+        // 2. The main scanning loop
+        function tick() {
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                // Set canvas size to video size
+                canvasElement.height = video.videoHeight;
+                canvasElement.width = video.videoWidth;
+                
+                // Draw the current video frame onto the canvas
+                canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+                
+                // Get the raw image data from the canvas
+                const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                
+                // Decode the QR code using jsQR
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert", // Important for small/low-contrast codes
+                });
+
+                if (code) {
+                    // Success: Code found
+                    handleScanSuccess(code.data);
+                    return; // Exit the loop after a successful scan
+                }
+            }
+            
+            // Continue the loop if no code was found
+            requestAnimationFrame(tick);
+        }
+
+        // 3. Handle a successful scan
+        function handleScanSuccess(data) {
+            outputResult.textContent = `Scanned QR Code: ${data}`;
+            loadingMessage.style.display = 'none';
+            // Stop the camera stream after success
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        // Start the process
+        startCamera();
+    </script>
+
+</body>
+</html>
