@@ -12,8 +12,21 @@ docReady(function() {
     var resultContainer = document.getElementById('qr-reader-results');
     var lastResult, countResults = 0;
 
-    var html5QrcodeScanner = new Html5QrcodeScanner(
-        "qr-reader", { fps: 10, qrbox: 250 });
+        // define the config object
+    let config = {
+        fps: 3,
+        qrbox: {width: 100, height: 100},
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        showTorchButtonIfSupported: true,
+    };
+    
+    // existing code
+    
+        // pass the config object to the Html5QrcodeScanner constructor
+        var html5QrcodeScanner = new Html5QrcodeScanner(
+            "qr-reader", config);
+
+
 
     function onScanSuccess(decodedText, decodedResult) {
         if (decodedText !== lastResult) {
@@ -34,5 +47,6 @@ docReady(function() {
         // You can avoid this callback completely, as it can be very verbose in nature.
     }
 
+    
     html5QrcodeScanner.render(onScanSuccess, onScanError);
 });
